@@ -103,6 +103,26 @@ router.get('/schedule', async (req, res) => {
   }
 });
 
+// ---- Webhook debug log ----------------------------------------------------
+// Lets you see, from the admin page, whether QuoteIQ's webhook calls are
+// actually arriving and what they look like -- crucial since QuoteIQ's exact
+// auth header / payload shape isn't publicly documented.
+
+router.get('/webhook-log', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT id, event_type, payload, received_at
+      FROM webhook_log
+      ORDER BY received_at DESC
+      LIMIT 20
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('[api] /webhook-log error', err);
+    res.status(500).json({ error: 'internal error' });
+  }
+});
+
 // ---- CSV backfill import --------------------------------------------------
 // The browser parses the CSV and maps columns to our field names (see public/admin.html),
 // then posts normalized rows here so the backend never has to guess QuoteIQ's export format.

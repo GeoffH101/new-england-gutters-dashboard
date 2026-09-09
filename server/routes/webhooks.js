@@ -5,17 +5,21 @@ const { extractEstimate, extractSchedule } = require('../lib/extract');
 
 const router = express.Router();
 
-function secretMatches(req) {
-  const expected = process.env.QUOTEIQ_WEBHOOK_SECRET;
-  if (!expected || expected === 'change-me') return false;
-
-  const provided =
+function providedSecret(req) {
+  return (
     req.get('x-quoteiq-secret') ||
     req.get('x-webhook-secret') ||
     req.get('x-quoteiq-signature') ||
     req.query.secret ||
-    '';
+    ''
+  );
+}
 
+function secretMatches(req) {
+  const expected = process.env.QUOTEIQ_WEBHOOK_SECRET;
+  if (!expected || expected === 'change-me') return false;
+
+  const provided = providedSecret(req);
   const a = Buffer.from(String(provided));
   const b = Buffer.from(String(expected));
   if (a.length !== b.length) return false;
@@ -25,6 +29,25 @@ function secretMatches(req) {
 router.post('/quoteiq', express.json({ limit: '2mb' }), async (req, res) => {
   if (!secretMatches(req)) {
     console.warn('[webhook] rejected: missing/invalid shared secret');
+    // Log the rejected attempt (headers + body, never the configured secret itself) so it's
+    // visible in the admin debug view -- this is how you find out what QuoteIQ actually sends.
+    try {
+      await pool.query('INSERT INTO webhook_log (event_type, payload) VALUES ($1, $2)', [
+        'REJECTED_AUTH',
+        {
+          received_headers: {
+            'x-quoteiq-secret': req.get('x-quoteiq-secret') || null,
+            'x-webhook-secret': req.get('x-webhook-secret') || null,
+            'x-quoteiq-signature': req.get('x-quoteiq-signature') || null,
+            'query.secret': req.query.secret || null,
+          },
+          had_any_value: Boolean(providedSecret(req)),
+          body: req.body || null,
+        },
+      ]);
+    } catch (logErr) {
+      console.error('[webhook] failed to log rejected attempt', logErr);
+    }
     return res.status(401).json({ error: 'unauthorized' });
   }
 
