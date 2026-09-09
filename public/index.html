@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>New England Gutters — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --blue: #2a78d6;
+    --blue-450: #2a78d6;
+    --blue-300: #6da7ec;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --gridline: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --blue: #3987e5;
+      --blue-450: #3987e5;
+      --blue-300: #5598e7;
+      --good: #0ca30c;
+      --warning: #fab219;
+      --critical: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --blue: #3987e5;
+    --blue-450: #3987e5;
+    --blue-300: #5598e7;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    padding: 20px 28px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header .sub {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 28px 64px;
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .tile .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .tile .value {
+    font-size: 26px;
+    font-weight: 700;
+    font-variant-numeric: proportional-nums;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 860px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card h2 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 14px;
+  }
+  .card .empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 24px 0;
+    text-align: center;
+  }
+  canvas { max-width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td {
+    text-align: left;
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--gridline);
+    white-space: nowrap;
+  }
+  th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  td { color: var(--text-secondary); }
+  td.primary { color: var(--text-primary); font-weight: 600; }
+  .table-wrap { overflow-x: auto; }
+  .status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--gridline);
+    color: var(--text-secondary);
+  }
+  footer {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 28px 40px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  footer a { color: var(--text-secondary); }
+  .banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>New England Gutters</h1>
+    <div class="sub">QuoteIQ dashboard</div>
+  </div>
+  <div class="sub" id="lastSync">Loading…</div>
+</header>
+
+<main>
+  <div class="banner" id="noDataBanner">
+    No data yet. Once QuoteIQ webhooks start arriving (or you run a CSV backfill from the
+    <a href="/admin.html" style="color:inherit">admin page</a>), this dashboard will populate automatically.
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Revenue trend (won estimates, by month)</h2>
+      <canvas id="revenueChart" height="140"></canvas>
+    </div>
+    <div class="card">
+      <h2>Sales pipeline by status</h2>
+      <canvas id="pipelineChart" height="140"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Upcoming jobs (next 25)</h2>
+      <div class="table-wrap" id="scheduleTable"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="card">
+      <h2>Recent estimates</h2>
+      <div class="table-wrap" id="estimatesTable"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Data comes from QuoteIQ webhooks (live) and CSV backfill (historical). Manage backfill at
+  <a href="/admin.html">/admin.html</a>.
+</footer>
+
+<script>
+const fmtMoney = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0);
+const fmtDate = (d) => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+
+async function getJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} -> ${res.status}`);
+  return res.json();
+}
+
+function renderTiles(summary) {
+  const r = summary.revenue || {};
+  const upcomingCount = (summary.upcoming_schedule || []).length;
+  const tiles = [
+    { label: 'Won revenue', value: fmtMoney(r.won_revenue) },
+    { label: 'Open pipeline value', value: fmtMoney(r.pipeline_value) },
+    { label: 'Avg. job value', value: fmtMoney(r.avg_job_value) },
+    { label: 'Total estimates', value: (r.total_estimates || 0).toLocaleString() },
+    { label: 'Upcoming jobs', value: upcomingCount.toLocaleString() },
+  ];
+  document.getElementById('tiles').innerHTML = tiles.map(t => `
+    <div class="tile">
+      <div class="label">${t.label}</div>
+      <div class="value">${t.value}</div>
+    </div>
+  `).join('');
+}
+
+function renderPipelineChart(pipeline) {
+  const ctx = document.getElementById('pipelineChart');
+  if (!pipeline.length) {
+    ctx.replaceWith(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'No estimates yet.' }));
+    return;
+  }
+  const styles = getComputedStyle(document.documentElement);
+  const blue = styles.getPropertyValue('--blue-450').trim();
+  const grid = styles.getPropertyValue('--gridline').trim();
+  const muted = styles.getPropertyValue('--text-muted').trim();
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: pipeline.map(p => p.status),
+      datasets: [{
+        label: 'Estimates',
+        data: pipeline.map(p => p.count),
+        backgroundColor: blue,
+        borderRadius: 4,
+        maxBarThickness: 36,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: grid }, ticks: { color: muted, precision: 0 }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { color: muted } },
+      }
+    }
+  });
+}
+
+function renderRevenueChart(trend) {
+  const ctx = document.getElementById('revenueChart');
+  if (!trend.length) {
+    ctx.replaceWith(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'No revenue history yet.' }));
+    return;
+  }
+  const styles = getComputedStyle(document.documentElement);
+  const blue = styles.getPropertyValue('--blue-450').trim();
+  const grid = styles.getPropertyValue('--gridline').trim();
+  const muted = styles.getPropertyValue('--text-muted').trim();
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trend.map(t => t.month),
+      datasets: [{
+        label: 'Won revenue',
+        data: trend.map(t => t.won_revenue),
+        borderColor: blue,
+        backgroundColor: blue,
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.25,
+        fill: false,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: muted } },
+        y: { grid: { color: grid }, ticks: { color: muted, callback: (v) => fmtMoney(v) }, beginAtZero: true },
+      }
+    }
+  });
+}
+
+function renderScheduleTable(rows) {
+  const el = document.getElementById('scheduleTable');
+  if (!rows.length) { el.innerHTML = '<div class="empty">Nothing scheduled yet.</div>'; return; }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Customer</th><th>Job</th><th>When</th><th>Status</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td class="primary">${r.customer_name || '—'}</td>
+            <td>${r.job_type || '—'}</td>
+            <td>${fmtDate(r.start_time)}</td>
+            <td><span class="status-pill">${r.status || '—'}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderEstimatesTable(rows) {
+  const el = document.getElementById('estimatesTable');
+  if (!rows.length) { el.innerHTML = '<div class="empty">No estimates yet.</div>'; return; }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+        ${rows.slice(0, 25).map(r => `
+          <tr>
+            <td class="primary">${r.customer_name || '—'}</td>
+            <td>${r.amount != null ? fmtMoney(r.amount) : '—'}</td>
+            <td><span class="status-pill">${r.status || '—'}</span></td>
+            <td>${fmtDate(r.quote_date || r.updated_at)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function load() {
+  try {
+    const [summary, trend, estimates, schedule] = await Promise.all([
+      getJSON('/api/summary'),
+      getJSON('/api/revenue-trend'),
+      getJSON('/api/estimates'),
+      getJSON('/api/schedule'),
+    ]);
+
+    document.getElementById('lastSync').textContent = summary.last_webhook_received_at
+      ? `Last webhook: ${fmtDate(summary.last_webhook_received_at)}`
+      : 'No webhooks received yet';
+
+    if (!summary.revenue || !summary.revenue.total_estimates) {
+      document.getElementById('noDataBanner').style.display = 'block';
+    }
+
+    renderTiles(summary);
+    renderPipelineChart(summary.pipeline || []);
+    renderRevenueChart(trend || []);
+    renderScheduleTable(summary.upcoming_schedule || []);
+    renderEstimatesTable(estimates || []);
+  } catch (err) {
+    console.error(err);
+    document.querySelector('main').insertAdjacentHTML('afterbegin',
+      `<div class="banner" style="display:block">Couldn't load dashboard data: ${err.message}</div>`);
+  }
+}
+
+load();
+</script>
+</body>
+</html>
